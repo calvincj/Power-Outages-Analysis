@@ -182,6 +182,24 @@ I used a `RandomForestRegressor` and tuned `max_depth`, `n_estimators`, and `min
 
 The final model achieved a train RMSE of 2,305 minutes and a **test RMSE of 2,548 minutes**, compared to the baseline test RMSE of 7,087 minutes. This is roughly a 64% reduction in test RMSE. The train/test gap also narrowed significantly, indicating much less overfitting.
 
+<iframe
+  src="assets/feature-importance.html"
+  width="800"
+  height="450"
+  frameborder="0"
+></iframe>
+
+The feature importance chart shows which variables the random forest relied on most. Log-transformed customer count is the top predictor, which makes sense since larger outages tend to take longer to restore. Cause category features also rank highly, consistent with the earlier finding that severe weather and fuel supply emergencies drive the longest outages.
+
+<iframe
+  src="assets/residual-plot.html"
+  width="800"
+  height="450"
+  frameborder="0"
+></iframe>
+
+The residual plot compares prediction errors for the baseline and final model on the same test set. Points closer to the horizontal zero line mean more accurate predictions. The final model's residuals are more tightly clustered around zero across the range of predicted values, while the baseline model shows larger and more spread out errors, especially for longer outages. Both models tend to underpredict very long outages, which is expected given how rare and hard to predict those events are.
+
 ---
 
 ## Fairness Analysis
