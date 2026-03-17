@@ -1,8 +1,5 @@
-Here's the full content ready to copy-paste:
-
-```markdown
 # What Makes Power Outages Last So Long?
-
+**Class**: DSC80
 **Name**: Calvin Chen
 
 ---
