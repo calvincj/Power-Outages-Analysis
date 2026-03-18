@@ -1,4 +1,5 @@
 # What Makes Power Outages Last So Long?
+
 **Class**: DSC80
 
 **Name**: Calvin Chen
@@ -51,6 +52,8 @@ Here is the head of the cleaned dataset:
 
 ### Univariate Analysis
 
+I first look at the distribution of outage duration and common causes for major outages.
+
 <iframe
   src="assets/outage-duration-dist.html"
   width="800"
@@ -58,7 +61,7 @@ Here is the head of the cleaned dataset:
   frameborder="0"
 ></iframe>
 
-The distribution of outage duration is heavily right-skewed. Most outages lasted around a few thousand minutes, but a few of them lasted over 100 thousand minutes. I used a log y-scale to make the distribution easier to read.
+The distribution of outage duration is heavily skewed to the right. Most outages lasted around a few thousand minutes, but a few of them lasted over 100 thousand minutes. I used a log y-scale to make the distribution easier to read.
 
 <iframe
   src="assets/outage-cause-counts.html"
@@ -71,6 +74,8 @@ Severe weather is the most common cause of major outages by far, as it made up n
 
 ### Bivariate Analysis
 
+Next, I move on to bivariate analysis and examine the outage durations by cause category, as well as looking at the relationship between seasons and cause category.
+
 <iframe
   src="assets/outage-duration-by-cause.html"
   width="800"
@@ -78,11 +83,11 @@ Severe weather is the most common cause of major outages by far, as it made up n
   frameborder="0"
 ></iframe>
 
-Severe weather and fuel supply emergencies tended to produce the longest outages by a pretty wide margin. Intentional attacks were frequent, but they tend to get resolved much faster than weather-driven events.
+Severe weather and fuel supply emergencies tended to produce the longest outages by a pretty wide margin. Intentional attacks were frequent, but they tend to get resolved much faster than events driven by weather conditions.
 
 ### Interesting Aggregates
 
-The table below shows the mean outage duration (in minutes) broken down by cause category and season.
+This table below shows the mean outage duration (in minutes) broken down by cause category and season.
 
 | CAUSE.CATEGORY                |   Winter |   Spring |   Summer |   Fall |
 |:------------------------------|---------:|---------:|---------:|-------:|
@@ -94,7 +99,7 @@ The table below shows the mean outage duration (in minutes) broken down by cause
 | severe weather                |   3869.3 |   3287.7 |   3214.8 | 5646.1 |
 | system operability disruption |    592.3 |    529.9 |   1152.1 |  371.5 |
 
-Fuel supply emergencies are much longer in winter and spring, which makes sense since heating demand is highest in colder months and puts more stress on fuel supply chains. Severe weather outages are worst in fall, which could be because of the hurricane season in the East Coast.
+I found that fuel supply emergencies are much longer in winter and spring, which makes sense since heating demand is much higher in colder months and consequently puts more stress on fuel supply chains. Severe weather outages are worst in fall, which could be because of the hurricane season in the East Coast.
 
 ---
 
@@ -102,7 +107,7 @@ Fuel supply emergencies are much longer in winter and spring, which makes sense 
 
 ### MNAR Analysis
 
-I believe `DEMAND.LOSS.MW` is likely MNAR. I found that measuring demand loss in megawatts requires specialized grid equipment, and smaller or more rural places may not have those equipment. This means that the missingness is actually tied to the value itself. The outages most likely to have low demand loss are also the ones where it probably won't get measured. 
+I believe that `DEMAND.LOSS.MW` is likely MNAR. The reason is that measuring demand loss in megawatts requires specialized grid equipment, so smaller or more rural places may not have those equipment. This means that the missingness is actually tied to the value itself. The outages most likely to have low demand loss are also the ones where it probably won't get measured. 
 
 To turn this into MAR, you would need data on whether each utility has that kind of metering infrastructure, since that would explain the missingness on its own without needing to look at the actual demand loss values.
 
@@ -173,7 +178,7 @@ The baseline model achieved a train RMSE of 4,347 minutes and a **test RMSE of 7
 
 ## Final Model
 
-For my final model I added the following features on top of the two from the baseline:
+For my final model I added the following five features on top of the two from the baseline:
 
 - `CAUSE.CATEGORY` (nominal): same as baseline, encoded with `OneHotEncoder`
 - `CUSTOMERS.AFFECTED` (quantitative): log-transformed since both outage duration and customer counts are heavily right-skewed. Doubling the number of affected customers doesn't double the restoration time, so a log transformation fits the relationship better.
@@ -181,11 +186,11 @@ For my final model I added the following features on top of the two from the bas
 - `SEASON` (nominal): from my EDA, fall severe weather outages lasted around 5,646 minutes on average compared to around 3,215 in summer. Season clearly affects how bad weather-related damage gets and how quickly crews can respond.
 - `POPDEN_URBAN` (quantitative): more densely populated urban areas tend to have more backup grid infrastructure, so outages there can often be fixed faster. I applied `StandardScaler` to normalize the range.
 
-I also capped extreme outliers at the 99th percentile of duration before modeling. Outages like the 108,000-minute event in the dataset are basically impossible to predict from the available features and were inflating RMSE in a way that wasn't useful.
+Also, outages like the 108,000-minute event in the data are basically impossible to predict from the available features and were inflating RMSE in a way that wasn't useful. So I decided to cap extreme outliers at the 99th percentile of duration before modeling.
 
-I used a `RandomForestRegressor` and tuned `max_depth`, `n_estimators`, and `min_samples_split` using `GridSearchCV` with 5-fold cross validation. The best hyperparameters were `max_depth=10`, `min_samples_split=10`, and `n_estimators=100`.
+Furthermore, I used a `RandomForestRegressor` and tuned `max_depth`, `n_estimators`, and `min_samples_split` using `GridSearchCV` with 5-fold cross validation. The best hyperparameters I got were `max_depth=10`, `min_samples_split=10`, and `n_estimators=100`.
 
-The final model achieved a train RMSE of 2,305 minutes and a **test RMSE of 2,548 minutes**, compared to the baseline test RMSE of 7,087 minutes. That is roughly a 64% drop in test RMSE. The train/test gap also got much smaller, which means the model is overfitting a lot less.
+The final model achieved a train RMSE of 2,305 minutes and a **test RMSE of 2,548 minutes**! In comparision, the baseline test RMSE was 7,087 minutes. That is roughly a 64% drop in test RMSE. The train/test gap also got much smaller, which means the model is overfitting a lot less.
 
 <iframe
   src="assets/feature-importance.html"
@@ -194,7 +199,7 @@ The final model achieved a train RMSE of 2,305 minutes and a **test RMSE of 2,54
   frameborder="0"
 ></iframe>
 
-The feature importance chart shows which variables the random forest relied on most. Log-transformed customer count is the top predictor, which makes sense since larger outages generally take longer to restore. Cause category features also rank highly, which lines up with the earlier finding that severe weather and fuel supply emergencies drive the longest outages.
+This feature importance chart shows which variables the random forest relied on most. As you can see, log-transformed customer count is the top predictor, which makes sense since larger outages generally take longer to restore. Cause category features also rank highly, which lines up with the earlier finding that severe weather and fuel supply emergencies cause the longest outages.
 
 <iframe
   src="assets/residual-plot.html"
@@ -203,13 +208,13 @@ The feature importance chart shows which variables the random forest relied on m
   frameborder="0"
 ></iframe>
 
-The residual plot compares prediction errors for the baseline and final model on the same test set. Points closer to the horizontal zero line mean more accurate predictions. The final model's errors are more tightly clustered around zero across the range of predicted values, while the baseline model has larger and more spread out errors, especially for longer outages. Both models tend to underpredict very long outages, which is expected since those events are rare and hard to predict.
+This residual plot compares prediction errors for the baseline and final model on the same test set. The points closer to the horizontal zero line mean that they are more accurate predictions. The final model's errors are more tightly clustered around zero across the range of predicted values, while the baseline model has larger and more spread out errors, especially for longer outages. Both models tend to underpredict very long outages, which is expected since those events are rare and hard to predict.
 
 ---
 
 ## Fairness Analysis
 
-I tested whether my final model performs fairly across outages in highly urbanized vs. less urbanized states, split by the median of `AREAPCT_URBAN`.
+I tested whether my final model performs fairly across outages in highly urbanized vs. rural states, split by the median of `AREAPCT_URBAN`.
 
 - Group X (high urbanization): outages where `AREAPCT_URBAN` is above the median
 - Group Y (low urbanization): outages where `AREAPCT_URBAN` is at or below the median
@@ -233,9 +238,13 @@ Since the p-value is above 0.05, I fail to reject the null hypothesis. The diffe
 
 ## Conclusion
 
-The main takeaway from this project is that outage duration is driven heavily by cause category and geography. Severe weather and fuel supply emergencies produce much longer outages than other causes, and this holds across seasons and regions. The hypothesis test confirmed that severe weather outages last significantly longer than intentional attack outages on average. Season also matters: fall outages tend to be the worst for severe weather, likely because of hurricane season, while winter fuel supply emergencies can stretch close to two weeks.
+The main takeaway from my project is that outage duration is driven heavily by cause category, though climate region and season also matter.
 
-The final model improved on the baseline by a lot, cutting test RMSE from about 7,087 minutes down to 2,548 minutes. The biggest improvements came from adding `CLIMATE.REGION` and `SEASON` as features, log-transforming customer counts, capping extreme outliers, and tuning hyperparameters. The fairness analysis found no significant difference in model performance between high and low urbanization areas.
+For cause categories, severe weather and fuel supply emergencies produce much longer outages than other causes, and this is true across different seasons and regions. The hypothesis test confirmed that severe weather outages last significantly longer than intentional attack outages on average. Season also mattered. Fall outages tend to be the worst for severe weather, likely because of hurricane season, while winter fuel supply emergencies can last roughly two weeks.
 
-However, there is still a lot of room to improve on. The model still struggles with very long outages since those are rare and hard to predict from the available features. Data that isn't in this dataset but would probably help includes the age and size of local grid infrastructure, the number of repair crews available at the time of the outage, and storm severity for weather-related events. Another limitation is that the dataset only goes through 2016, so it may not reflect how grid resilience and utility response have changed since then.
+The final model improved on the baseline by a lot, cutting test RMSE from about 7,087 minutes down to 2,548 minutes. I improved the model by 1. adding `CLIMATE.REGION` and `SEASON` as features, 2. log-transforming customer counts, 3. capping extreme outliers, and 4. tuning hyperparameters. The fairness analysis found no significant difference in model performance between high and low urbanization areas.
+
+However, there is still a lot of room to improve on. The model still struggles with very long outages since those are rare and hard to predict from the available features. I think it would also be helpful to include data that has information on 1. the age and size of local grid infrastructure, 2. the number of repair crews available at the time of the outage, and 3. storm severity for weather-related events. Another limitation is that the dataset only goes through 2016, so it may not reflect trends for more recent power outages.
+
+Nevertheless, my project shows that it's possible to build a model that meaningfully predicts outage duration using a relatively simple set of features. And I also learned a lot about what makes power outages last as long as they do.
 ```
